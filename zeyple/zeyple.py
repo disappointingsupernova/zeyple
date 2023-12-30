@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import sys
@@ -114,6 +114,21 @@ class Zeyple:
         in_message = message_from_binary(message_data)
         logging.info(
             "Processing outgoing message %s", in_message['Message-id'])
+
+        if in_message.get_content_maintype() == 'text':
+            payload=str(in_message.get_payload(decode=True))
+        else:
+            payload=str(in_message.get_payload()[0].get_payload(decode=True))
+
+        if "-----BEGIN PGP MESSAGE-----" in payload or "multipart/encrypted" in in_message["Content-Type"]:
+            logging.info("Message already encrypted. Skipping encrypting the message and delivering to mailbox.")
+            self._add_zeyple_header(in_message)
+            in_message.add_header(
+                'X-Zeyple',
+                "Message already encrypted"
+            )
+            self._send_message(in_message, recipients)
+            return None
 
         if not recipients:
             logging.warn("Cannot find any recipients, ignoring")
